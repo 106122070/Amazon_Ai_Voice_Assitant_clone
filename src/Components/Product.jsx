@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef,useState } from 'react'
 
 import {  toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -14,6 +14,13 @@ import { useNavigate } from 'react-router-dom';
 
 
 const Product = ({imgsrc,proinfo,price,rating,id,prodescription,key}) => {
+
+
+    const myRef = useRef([]);
+
+    const emaildata  = localStorage.getItem('emialids');
+
+    const [visibilitystyles,setvisibilitystyles]  = useState(false);
 
     const [cartshow,setcartshow] = useState(true);
 
@@ -35,6 +42,7 @@ const Product = ({imgsrc,proinfo,price,rating,id,prodescription,key}) => {
 
         const unsubscribe =  onSnapshot(purchasecollections,(snapshot)=> {
           const data = snapshot.docs.map(doc =>( {
+            email:doc.data().emailid,
             count:doc.data().count,
             id:doc.id,
             imgsrc:doc.data().imgsrc,
@@ -43,7 +51,7 @@ const Product = ({imgsrc,proinfo,price,rating,id,prodescription,key}) => {
             title:doc.data().title,
            
         }));
-        setpurchasedata(data);
+        setpurchasedata(data.filter((data)=> data.email == emaildata));
     
         })
         return ()=>{
@@ -61,9 +69,10 @@ const Product = ({imgsrc,proinfo,price,rating,id,prodescription,key}) => {
 
       const addpurchasedata = () =>{
          const findmatchdata = purchasedata.filter((data)=>data.imgsrc == imgsrc);
-    if(!findmatchdata[0]){
+   
+         if(!findmatchdata[0]){
         const getdata = collection(firestore1,'purchaseitems');
-        addDoc(getdata,{"id":id,"title":proinfo,"price":price,"imgsrc":imgsrc,"rating":rating,"count":1})
+        addDoc(getdata,{"emailid":emaildata,"id":id,"title":proinfo,"price":price,"imgsrc":imgsrc,"rating":rating,"count":1})
         .then(res => console.log(res))
         .catch(error => console.log(error.message));
     }else{
@@ -79,7 +88,7 @@ const Product = ({imgsrc,proinfo,price,rating,id,prodescription,key}) => {
   return (
     <>
     <Productstyles>
-    <div className="product">
+    <div   style={{opacity:`${visibilitystyles ? 0:1}`}} className="product">
         <div className="product-details">
        <p> {proinfo}</p>
         </div>
@@ -124,7 +133,7 @@ const Productstyles = styled.div`
         filter:brightness(99%);
         z-index: 13;
         background-color: #ffffff;
-        
+        transition:1s ease-in-out;
         .product-details{
             width:260px;
             height:80px;
