@@ -1,15 +1,30 @@
-import React from 'react'
+import React, { useRef,useState,useEffect } from 'react'
 
 import styled from 'styled-components'
 import img from '../store/images/amazon-logo.png';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Foooter = () => {
+
+
+    const myRef = useRef();
+  const [visibilitystyles,setvisibilitystyles]  = useState(false);
+
+useEffect(()=>{
+ 
+  const observer = new IntersectionObserver((entries)=>{
+    const entry = entries[0];
+    setvisibilitystyles(entry.isIntersecting);
+  });
+observer.observe(myRef.current);
+},[]);
+
+
   return (
     <>
     <StylesFooter>
         
-    <div className='footer-body'>
+    <div ref={myRef} style={{opacity:`${visibilitystyles ? 1:0}`}} className='footer-body'>
         <div className="footer-container">
             <div className="info-box-common">
                 <h3>Get to Know Us</h3>
@@ -52,6 +67,7 @@ const Foooter = () => {
 const StylesFooter = styled.div`
     
 .footer-body{
+    transition:1.5s ease;
     padding-left:50px;
     padding-right: 50px;
     padding-top: 10px;
