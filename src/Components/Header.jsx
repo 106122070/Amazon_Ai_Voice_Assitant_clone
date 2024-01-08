@@ -5,17 +5,21 @@ import styled from 'styled-components';
 import { FaSearch } from 'react-icons/fa';
 import { FaShoppingCart } from 'react-icons/fa';
 import { FaMicrophone ,FaCamera} from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useActionData, useNavigate } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import {AiOutlineLogout} from 'react-icons/ai';
 import { fireAuth } from '../utils/firebase';
 import { toast } from 'react-toastify';
-import { useDispatch } from 'react-redux';
+import { useDispatch,useSelector } from 'react-redux';
 import { getdata,checksearchdata } from '../utils/redux-store-management';
-import {deleteDoc,doc,onSnapshot,collection,addDoc} from 'firebase/firestore';
+import {deleteDoc,doc,onSnapshot,collection,addDoc,updateDoc} from 'firebase/firestore';
 import { firestore1 } from '../utils/firebase';
 
 const Header = ({pagename,cartcount}) => {
+
+const cartcount1 = useSelector((state) =>state.cart.cartcount);
+const totalmoney = useSelector((state) => state.cart.totalamount);
+const offercash  = useSelector((state) => state.cart.offeramount);
        
         window.SpeechRecognition = window.webkitSpeechRecognition;
         const recognition =new SpeechRecognition();
@@ -33,6 +37,7 @@ const Header = ({pagename,cartcount}) => {
         const [focus,setfocus] = useState(true);
 
     const dispatch = useDispatch();
+    const emaildata  = localStorage.getItem('emialids');
     const username = localStorage.getItem('username');
 
     const [checksearch,setchecksearch] = useState(false);
@@ -42,6 +47,7 @@ const Header = ({pagename,cartcount}) => {
     const [showupload,setshowupload] = useState(false);
 
     const SERVER_IP = 'http://localhost:5005';
+
     const toaststyles =  {
         position: "top-center",
         autoClose: 1300, 
@@ -55,16 +61,65 @@ const Header = ({pagename,cartcount}) => {
      
 
     const navigate1 = useNavigate();
-    let flag = true;
+
     onAuthStateChanged(fireAuth,(currentuser)=>{
 
         if (!currentuser) 
         {
-        setTimeout(() => {
+             setTimeout(() => {
             navigate1('/SignIn');  
         }, 2500);  
     }
       });
+
+   
+
+      const cartsdata = collection(firestore1,'cashcollections');
+
+      const [cartcollectiondata,setcartcollectiondata] = useState([]);
+
+
+useEffect(()=>{
+
+    const unsubscribe =  onSnapshot(cartsdata,(snapshot)=> {
+      const searchcollectiondata = snapshot.docs.map(doc =>({
+           email:doc.data().emailid,
+           totalmoney:doc.data().money,
+           offermoney:doc.data().offermoney,
+           cartcount:doc.data().cartcount,
+           id:doc.id,
+           u_name:doc.data().name,
+    }));
+
+    setcartcollectiondata(searchcollectiondata.filter((data)=>data.u_name == username));
+
+    })
+    return ()=>{
+      unsubscribe();
+    }
+      
+  },[]);
+
+      const addcart_datas = () =>{
+       console.log(username,"new updated");
+
+        if(!cartcollectiondata[0]){
+           
+            console.log("done");
+            addDoc(cartsdata,{"name":username,"emailid":emaildata,"offermoney":offercash,"money":totalmoney,"cartcount":cartcount1})
+        .then(res => console.log(res))
+        .catch(error => console.log(error.message));
+        
+    }
+        else{
+            console.log("upadate success");
+            const docref = doc(firestore1,'cashcollections',cartcollectiondata[0].id);
+            const updatedata = {"offermoney":offercash,"money":totalmoney,"cartcount":cartcount1 }
+            updateDoc(docref,updatedata).then(() => console.log("successfully done")).catch((error) => console.log("udwbvu",error));  
+
+        }
+
+      };
 
       const logout = () =>{
         toast.success('Successfully Signed Out And Shop Next Time',toaststyles);
@@ -124,18 +179,6 @@ const data=searchdata;
         
         setsearchdata(localStorage.getItem('searchdata'));
       
-    
-
-      
-
-/* const loadmodel =async () =>{
-    try{
-        const model = await mobilenet.load();
-        setmodel(model);
-    }catch(error){
-        console.log(error);
-    }
-} */
 
 },[]);
 
@@ -273,7 +316,7 @@ const imagedetector =async () =>{
                 <div className="cart">cart</div>
             </div>
             <div>
-          <button  className='btn-signout' onClick={()=>{signOut(fireAuth);logout();}}> <AiOutlineLogout/></button> 
+          <button  className='btn-signout' onClick={()=>{signOut(fireAuth);logout();addcart_datas();}}> <AiOutlineLogout/></button> 
             </div>
          
         </div>
