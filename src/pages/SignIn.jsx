@@ -8,6 +8,7 @@ import {  toast } from 'react-toastify';
 import { ToastContainer} from 'react-toastify';
 import {collection,addDoc,updateDoc, doc,onSnapshot} from 'firebase/firestore';
 import { firestore1 } from '../utils/firebase';
+import { useDispatch, useSelector } from 'react-redux';
 
 import axios from 'axios';
 import img2 from '../store/images/amazon-logo-sighin.png';
@@ -15,9 +16,10 @@ import styled from 'styled-components';
 import Googleicon from '../store/images/Google.png';
 import Github from '../store/images/Github.png';
 import img_pages_sigin from '../store/images/amazon-sigin-images.png';
+import { initialState } from '../utils/redux-store-management.jsx';
+import { reset } from '../utils/redux-store-management.jsx';
 
-
-const SignIn = () => {
+const SignIn = () => { 
 
     const toaststyles =  {
         position: "bottom-right",
@@ -40,6 +42,7 @@ const SignIn = () => {
     const navigate1 = useNavigate();
 
 const userscollections = collection(firestore1,'userscollections');
+const cartsdata = collection(firestore1,'cashcollections');
 
 useEffect(()=>{
 
@@ -60,7 +63,7 @@ useEffect(()=>{
 
 const addusersdata = (name,email) =>{
         
-    const chech_email = userdata.filter((data)=>data.email__id === email);
+    const chech_email = userdata.filter((data)=>data.email__id === email && data.name1 === name);
     if(!chech_email[0]){
     const getdata = collection(firestore1,'userscollections');
     addDoc(getdata,{"name":name,"emailid":email})
@@ -69,6 +72,7 @@ const addusersdata = (name,email) =>{
     
     }
 }
+
 
 const SERVER_IP = 'http://localhost:5005';
 
@@ -95,23 +99,63 @@ const AdminAuthorizer =async (token) =>{
 
 }
 
+
+
+const [cartcollectiondata,setcartcollectiondata] = useState([]);
+const emaildata  = localStorage.getItem('emialids');
+
+
+  const dispatch = useDispatch();
+
+  const cart_update = (email) =>{
+
+    console.log(email,"new op");
+    const cartdata = cartcollectiondata.filter((data)=>data.email === email).length > 0 ? cartcollectiondata.filter((data)=>data.email === email)[0].cartcount : 0;
+    const offercash = cartcollectiondata.filter((data)=>data.email === email).length > 0 ? cartcollectiondata.filter((data)=>data.email === email)[0].offermoney : 0;
+    const totalcash = cartcollectiondata.filter((data)=>data.email === email).length > 0 ? cartcollectiondata.filter((data)=>data.email === email)[0].totalmoney : 0;
+
+    console.log(cartdata,offercash,totalcash);
+    console.log("nkenvkenv",emaildata);
+    console.log('data spred',cartcollectiondata.filter((data)=>data.email === email));
+
+    dispatch(reset({cartdata,offercash,totalcash}));
+    console.log("reset successfully done");
+
+  }
+
    const googlesigin =() =>{
 
     signInWithPopup(fireAuth,provider)
     .then((results)=>{localStorage.setItem('username',results.user.displayName);
+    localStorage.setItem('emialids',results.user.email);
     toast.success('Successfully LogIn Happy Shopping', toaststyles);
     addusersdata(results.user.displayName,results.user.email);
-    localStorage.setItem('emialids',results.user.email);
-    console.log(results.user);
-        const token = results.user.accessToken;
+    const token = results.user.accessToken;
     AdminAuthorizer(token);
-    
-    
+    cart_update(results.user.email);
     })
     .catch((error)=>{console.log(error);
     toast.error('Try Again Or their May No Internet Connection', toaststyles);
     })
 }
+
+useEffect(()=>{
+
+    const unsubscribe =  onSnapshot(cartsdata,(snapshot)=> {
+      const searchcollectiondata = snapshot.docs.map(doc =>({
+           email:doc.data().emailid,
+           totalmoney:doc.data().money,
+           offermoney:doc.data().offermoney,
+           cartcount:doc.data().cartcount,
+
+    }));
+    setcartcollectiondata(searchcollectiondata);
+    })
+    return ()=>{
+      unsubscribe();
+    }
+      
+  },[]);
 
 /* const GitHubsigin = () =>{
    
@@ -149,10 +193,12 @@ const handlesubmit = async () =>{
         await signInWithEmailAndPassword(fireAuth,useremail,userpassword);
         onAuthStateChanged(fireAuth,(currentuser)=>{
             const get_email = userdata.filter((data)=>data.email__id === currentuser.email);
-
-            localStorage.setItem('username',String(get_email[0].name1).toUpperCase());
+            
+            localStorage.setItem('username',String(get_email[0].name1));
             if(flag==0){
+                addusersdata(currentuser.displayName,currentuser.email);
                 toast.success('Successfully LogIn Happy Shopping', toaststyles);
+                cart_update(currentuser.email);
                 flag=1;
             }setTimeout(()=>{
                 navigate1('/Home');
