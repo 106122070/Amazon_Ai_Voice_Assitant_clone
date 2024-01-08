@@ -1,18 +1,19 @@
 import { configureStore,createSlice } from '@reduxjs/toolkit';
 import storage from 'redux-persist/lib/storage'; 
 import {persistStore,persistReducer} from 'redux-persist'
-import React from 'react';
+
 
 const persistConfigure = {
+
     key:'root',
     storage,
 };
 
+export const initialState={
 
-const initialState={
-    cartcount:0,
-    totalamount:0,
-    offeramount:0,
+    cartcount: 0,
+    totalamount: 0,
+    offeramount: 0,
     data:'',
     checksearch:false
 }
@@ -24,12 +25,10 @@ const storeslice = createSlice({
     reducers:{
         addition :(state) =>{
             state.cartcount +=1;
-          
         },
         deletion:(state)=>{
             if(state.cartcount!=0){
                 state.cartcount -= 1;
-          
             }
         },
         insubtotal:(state,action) => {
@@ -78,7 +77,13 @@ const storeslice = createSlice({
        },
        checksearchdata:(state,action)=>{
         state.checksearch=action.payload;
-       }
+       },
+       reset:(state,action)=>{
+        const {cartdata,offercash,totalcash } = action.payload;
+        state.cartcount = cartdata;
+        state.offeramount = offercash;
+        state.totalamount = totalcash
+       },
 
     }
 });
@@ -96,5 +101,5 @@ export const store = configureStore({
 
 export const persistor = persistStore(store); 
 
-export const {addition,deletion,insubtotal,desubtotal,offermoney,deoffermoney,additioncartmoney,deletecartmoney,getdata,checksearchdata} = storeslice.actions;
+export const {addition,deletion,insubtotal,desubtotal,offermoney,deoffermoney,additioncartmoney,deletecartmoney,getdata,checksearchdata,reset} = storeslice.actions;
 
