@@ -11,14 +11,16 @@ import {AnimatePresence, motion} from 'framer-motion';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 import Foooter from '../Components/Footer';
-import { toast } from 'react-toastify';
+import { toast,ToastContainer } from 'react-toastify';
 
 const Checkoutpage = () => {
+
+  const emaildata  = localStorage.getItem('emialids');
 
   const SERVER_IP = 'http://localhost:5005';
   const purchasecollections = collection(firestore1,'purchaseitems');
   const savedcollections = collection(firestore1,'savedcollections');
-  const cartmoneycollections = collection(firestore1,'cashcollections');
+ 
   const [purdata,setpurdata] = useState([]);
   const [saveddata,setsaveddata] = useState([]);
   const cartcount1 = useSelector((state) =>state.cart.cartcount);
@@ -30,6 +32,7 @@ const Checkoutpage = () => {
 
     const unsubscribe =  onSnapshot(purchasecollections,(snapshot)=> {
       const purchasedata = snapshot.docs.map(doc =>( {
+            email:doc.data().emailid,
             count:doc.data().count,
             id:doc.id,
             imgsrc:doc.data().imgsrc,
@@ -37,7 +40,8 @@ const Checkoutpage = () => {
             rating:doc.data().rating,
             title:doc.data().title,
     }));
-    setpurdata(purchasedata);
+    
+    setpurdata(purchasedata.filter((data)=> data.email == emaildata));
     localStorage.setItem("purchasedata",purdata);
     })
     return ()=>{
@@ -50,6 +54,7 @@ const Checkoutpage = () => {
 
     const subscribesaveitems =  onSnapshot(savedcollections,(snapshot)=> {
       const saveddata = snapshot.docs.map(doc =>( {
+        email:doc.data().emailid,
         count:doc.data().count,
         image:doc.data().image,
         rating:doc.data().rating,
@@ -57,7 +62,7 @@ const Checkoutpage = () => {
         price:doc.data().price,
         id:doc.id
     }));
-    setsaveddata(saveddata);
+    setsaveddata(saveddata.filter((data)=> data.email == emaildata));
 
     })
     return ()=>{
@@ -74,6 +79,7 @@ const Checkoutpage = () => {
 }
 
 const updateaddQty = (imgsrc) =>{
+
   const findmatchdata = purdata.filter((data)=>data.imgsrc == imgsrc);
   const docref = doc(firestore1,'purchaseitems',findmatchdata[0].id);
   const adder = Number(findmatchdata[0].count);
@@ -83,6 +89,7 @@ const updateaddQty = (imgsrc) =>{
 }
 
 const updatesubQty = (imgsrc) =>{
+
   const findmatchdata = purdata.filter((data)=>data.imgsrc == imgsrc);
   const docref = doc(firestore1,'purchaseitems',findmatchdata[0].id);
   const adder = Number(findmatchdata[0].count);
@@ -93,23 +100,26 @@ const updatesubQty = (imgsrc) =>{
 
 
   const addpurchasedata = (id,image,title,price,rating) =>{
+
     const find1 = purdata.filter((data) => data.imgsrc == image);
     if(!find1[0]){
     const getdata = collection(firestore1,'purchaseitems');
-    addDoc(getdata,{"id":id,"title":title,"price":price,"imgsrc":image,"rating":rating,"count":1})
+    addDoc(getdata,{"emailid":emaildata,"id":id,"title":title,"price":price,"imgsrc":image,"rating":rating,"count":1})
     .then(res => console.log(res))
     .catch(error => console.log(error.message));
     dispatch(insubtotal(price));
     dispatch(addition());
     removesavedcart(id);
     }
+
 }
 
   const saveditemsdata = (id,image,title,price,rating) =>{
-    const find1 = saveddata.filter((data) => data.image == image);
+
+    const find1 = saveddata.filter((data) => data.image == image );
     if(!find1[0]){
     const getdata = collection(firestore1,'savedcollections');
-    addDoc(getdata,{"id":id,"title":title,"price":price,"image":image,"rating":rating})
+    addDoc(getdata,{"emailid":emaildata,"id":id,"title":title,"price":price,"image":image,"rating":rating})
     .then(res => console.log(res))
     .catch(error => console.log(error.message));}
 }
@@ -131,7 +141,7 @@ const scrollToTop = () =>{
 }; 
 
 const checkoutitems = async () =>{
-  const emaildata  = localStorage.getItem('emialids');
+  
 
   await fetch(SERVER_IP+'/api/checkout-sessions',{
     method: 'POST',
@@ -152,11 +162,24 @@ const checkoutitems = async () =>{
 
 }
 
+const toaststyles =  {
+  position: "bottom-right",
+  autoClose: 1300, 
+  hideProgressBar: false, 
+  closeOnClick: true,
+  pauseOnHover: false, 
+  draggable: true, 
+  progress: undefined,
+  className: "custom-toast",
+}
+
 
   return (
     <Checkoutstyles>
     <>
+
     <Header cartcount={cartcount1} pagename={'checkout'} /> 
+    <ToastContainer/>
     <div className="container">
           <div className="shopping-cart">
               <h4 className='head-cart1'> Shopping Cart</h4>  
@@ -224,7 +247,7 @@ const checkoutitems = async () =>{
                     </div>
                   )
                 }
-                <button className='buy-btn' onClick={()=>{checkoutitems();}}>Proceed to Buy</button>
+                <button className='buy-btn' onClick={()=>{purdata[0] ? checkoutitems() : toast.warning("You did Not Select Any items",toaststyles);}}>Proceed to Buy</button>
                
             </div>
           
